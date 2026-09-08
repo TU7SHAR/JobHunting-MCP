@@ -88,3 +88,37 @@ present. No secrets committed; resume text is treated as untrusted input.
 
 **Verification:** `node --test` → 10 pass / 0 fail. `next build` → success with
 routes `/`, `/api/health`, `/api/match`, `/api/resume/parse`.
+
+
+---
+
+## 2026-09-08 — Oracle Ollama tunnel setup + docs
+
+**Supposed to do:** Connect JobPilot to the user's existing Oracle-hosted Qwen
+model so the app can actually run.
+
+**How the agent interpreted it:** Verify a live connection to the model and
+document the exact working setup, then wire the config guidance into the repo.
+No hardcoded ephemeral URL (it changes on restart).
+
+**What happened / verified:**
+- User ran `cloudflared tunnel --url http://localhost:11434` on the Oracle VM.
+- Hit two real issues, both resolved: (1) Ollama returned `403` through the
+  tunnel until started with `OLLAMA_ORIGINS='*'` and `OLLAMA_HOST=0.0.0.0:11434`;
+  (2) the manually-run server (user `ubuntu`) had an empty model store, fixed by
+  `ollama pull qwen2.5:3b`.
+- Confirmed end-to-end through the tunnel: `/api/tags` lists `qwen2.5:3b` and
+  `/api/chat` returned a real completion (HTTP 200).
+
+**What the agent changed:**
+- Added `docs/oracle-ollama-setup.md` — the full working recipe (three-terminal
+  manual setup, the 403/origins fix, the per-user model-store gotcha, verify
+  commands, a persistent systemd variant, and the named-tunnel + auth note).
+- Updated `README.md` "Connecting to the Oracle-hosted model" section.
+- Updated `.env.example` with the tunnel example and the OLLAMA_ORIGINS caveat.
+
+**Files affected:** `docs/oracle-ollama-setup.md`, `README.md`, `.env.example`.
+
+**Impact:** The model connection is proven working. Users can reproduce it. No
+secret or ephemeral URL committed. For local dev / Vercel, set OLLAMA_BASE_URL to
+the current tunnel URL; for a lasting setup, use a named tunnel + token proxy.

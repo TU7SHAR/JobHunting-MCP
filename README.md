@@ -53,16 +53,26 @@ ollama pull qwen2.5:3b
 2. Review/edit the profile.
 3. Paste a job description → score it.
 
-## Deploying to Vercel
+## Connecting to the Oracle-hosted model
 
-The frontend + API routes deploy directly. **The one thing Vercel cannot reach
-is a `localhost` Ollama on your Oracle VM.** Choose one:
+JobPilot calls Ollama's API. The model runs on the Oracle VM. You have two paths:
 
-1. **Run JobPilot on the Oracle VM too** and set `OLLAMA_BASE_URL=http://127.0.0.1:11434`.
-2. **Deploy on Vercel** and expose Ollama through an authenticated HTTPS reverse
-   proxy (Caddy/Nginx/Cloudflare Tunnel). Set `OLLAMA_BASE_URL` to that HTTPS URL
-   and `OLLAMA_AUTH_TOKEN` to the proxy's bearer token. Never expose raw Ollama
-   (it has no authentication).
+1. **Run JobPilot on the Oracle VM too** → `OLLAMA_BASE_URL=http://127.0.0.1:11434`.
+2. **Run JobPilot elsewhere (local dev or Vercel)** → expose Ollama over a
+   Cloudflare tunnel and point `OLLAMA_BASE_URL` at that HTTPS URL.
+
+Full step-by-step (including the `403`/origin fix and the per-user model-store
+gotcha we hit) is in **[`docs/oracle-ollama-setup.md`](./docs/oracle-ollama-setup.md)**.
+
+Example (tunnel path):
+```bash
+OLLAMA_BASE_URL=https://<your-tunnel>.trycloudflare.com
+OLLAMA_MODEL=qwen2.5:3b
+```
+
+> ⚠️ A quick `trycloudflare.com` tunnel URL **changes every restart** and has
+> **no auth**. For anything lasting, use a named tunnel and put a token-checking
+> proxy in front of Ollama (`OLLAMA_AUTH_TOKEN`).
 
 Set the same env vars from `.env.example` in the Vercel project settings.
 

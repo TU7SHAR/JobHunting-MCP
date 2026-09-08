@@ -43,3 +43,17 @@ Documents what each command and key file in JobPilot does.
 | `OLLAMA_TIMEOUT_MS` | `120000` | Request timeout in ms. |
 | `OLLAMA_TEMPERATURE` | `0.2` | Sampling temperature (lower = more consistent). |
 | `OLLAMA_AUTH_TOKEN` | (blank) | Bearer token for a reverse proxy in front of Ollama. |
+
+## Connecting to the Oracle model
+
+See `docs/oracle-ollama-setup.md` for the full working recipe. Key commands run
+on the Oracle VM:
+
+```bash
+# 1. Ollama, all interfaces + any origin (fixes 403 through a tunnel)
+OLLAMA_HOST=0.0.0.0:11434 OLLAMA_ORIGINS='*' ollama serve
+# 2. Ensure the model exists for this server
+ollama pull qwen2.5:3b && ollama list
+# 3. Tunnel to Ollama's port (prints a NEW url each run)
+cloudflared tunnel --url http://localhost:11434
+```
