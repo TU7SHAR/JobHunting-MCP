@@ -45,3 +45,46 @@ foundation for later discovery/matching/application PRs.
 
 **Verification:** `node --test` → 6 pass / 0 fail. `next build` → compiled
 successfully, routes `/`, `/api/health`, `/api/match` generated.
+
+
+---
+
+## 2026-09-08 — Resume intake (upload + parse)
+
+**Supposed to do:** Let the user provide their resume (upload or paste) and turn
+it into the structured candidate profile that feeds the match pipeline.
+
+**How the agent interpreted it:** Build a resume-intake feature on top of PR #1:
+server-side text extraction (PDF/DOCX/TXT) + a Qwen-backed structured parse that
+is strictly grounded (no invented facts), returning a profile the existing
+`/api/match` form can consume directly. Ship as its own new branch
+(`feat/resume-intake`) and a new PR, per the branch/PR rule.
+
+**What the agent did / changed:**
+- Added deps: `pdf-parse` and `mammoth` (pure-JS, serverless-safe).
+- `lib/resume-extract.js`: `extractResumeText(buffer, filename, mimetype)` for
+  PDF/DOCX/TXT/MD, whitespace cleanup, 40k-char cap, `ExtractError`, and a
+  scanned/image-PDF guard. Imports `pdf-parse/lib/pdf-parse.js` to avoid the
+  package's debug-on-import bug.
+- `lib/schema.js`: added `parsedResumeSchema` (name/email/phone/location/
+  targetRoles/skills/experienceYears/experience[]/projects[]/education[]/summary)
+  and `parsedResumeToCandidate()` to reduce it to the candidate profile.
+- `lib/resume-parse.js`: `parseResume(text)` calls Qwen with a strict
+  no-fabrication JSON prompt, validates with zod, and `coerceParsedResume()`
+  normalizes minor type slips before a retry.
+- `app/api/resume/parse/route.js`: accepts multipart file (8 MB cap) or JSON
+  `{text}`, returns `{parsed, candidate}`. `maxDuration=120`.
+- `app/page.js`: new "1. Your resume" panel (upload + paste) that auto-fills the
+  candidate form; panels renumbered; sample defaults removed.
+- `tests/resume.test.js`: 4 unit tests for the pure mapping/coercion logic.
+
+**Files affected:** `package.json`, `package-lock.json`, `lib/resume-extract.js`,
+`lib/resume-parse.js`, `lib/schema.js`, `app/api/resume/parse/route.js`,
+`app/page.js`, `tests/resume.test.js`, docs and commands.
+
+**Impact:** Resume now becomes the source of truth for the candidate profile.
+`npm test` → 10/10 pass. `npm run build` → compiles; `/api/resume/parse` route
+present. No secrets committed; resume text is treated as untrusted input.
+
+**Verification:** `node --test` → 10 pass / 0 fail. `next build` → success with
+routes `/`, `/api/health`, `/api/match`, `/api/resume/parse`.

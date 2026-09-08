@@ -3,13 +3,11 @@
 import { useState } from "react";
 import "./globals.css";
 
-const SAMPLE_SKILLS = "Python, JavaScript, React, Next.js, Flask, Node.js, RAG, LLM, PostgreSQL, MongoDB";
-
 export default function Home() {
   const [name, setName] = useState("");
-  const [skills, setSkills] = useState(SAMPLE_SKILLS);
-  const [experienceYears, setExperienceYears] = useState(1);
-  const [location, setLocation] = useState("Punjab, India");
+  const [skills, setSkills] = useState("");
+  const [experienceYears, setExperienceYears] = useState(0);
+  const [location, setLocation] = useState("");
   const [openToRemote, setOpenToRemote] = useState(true);
   const [summary, setSummary] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -17,6 +15,71 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+
+  // Resume intake state
+  const [resumeText, setResumeText] = useState("");
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState("");
+  const [resumeStatus, setResumeStatus] = useState("");
+
+  /** Apply a parsed candidate profile returned by /api/resume/parse. */
+  function applyCandidate(candidate, parsed) {
+    if (candidate.name) setName(candidate.name);
+    if (Array.isArray(candidate.skills)) setSkills(candidate.skills.join(", "));
+    if (typeof candidate.experienceYears === "number")
+      setExperienceYears(candidate.experienceYears);
+    if (candidate.location) setLocation(candidate.location);
+    if (typeof candidate.openToRemote === "boolean") setOpenToRemote(candidate.openToRemote);
+    if (candidate.summary) setSummary(candidate.summary);
+
+    const bits = [];
+    if (parsed?.skills?.length) bits.push(`${parsed.skills.length} skills`);
+    if (parsed?.projects?.length) bits.push(`${parsed.projects.length} projects`);
+    if (parsed?.experience?.length) bits.push(`${parsed.experience.length} roles`);
+    if (parsed?.education?.length) bits.push(`${parsed.education.length} education`);
+    setResumeStatus(
+      `Parsed${parsed?.name ? ` ${parsed.name}'s` : ""} resume — ${bits.join(", ") || "profile filled"}. Review below before scoring.`,
+    );
+  }
+
+  async function handleUpload(file) {
+    if (!file) return;
+    setResumeError("");
+    setResumeStatus("");
+    setResumeLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/resume/parse", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) setResumeError(data.error || "Could not parse the resume");
+      else applyCandidate(data.candidate, data.parsed);
+    } catch (e) {
+      setResumeError("Network error: " + e.message);
+    } finally {
+      setResumeLoading(false);
+    }
+  }
+
+  async function handleParseText() {
+    setResumeError("");
+    setResumeStatus("");
+    setResumeLoading(true);
+    try {
+      const res = await fetch("/api/resume/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: resumeText }),
+      });
+      const data = await res.json();
+      if (!res.ok) setResumeError(data.error || "Could not parse the resume");
+      else applyCandidate(data.candidate, data.parsed);
+    } catch (e) {
+      setResumeError("Network error: " + e.message);
+    } finally {
+      setResumeLoading(false);
+    }
+  }
 
   async function handleMatch() {
     setError("");
@@ -58,13 +121,48 @@ export default function Home() {
     <div className="container">
       <h1>JobPilot</h1>
       <p className="subtitle">
-        Score a candidate profile against a job description using a self-hosted
-        Qwen model.
+        Upload your resume, then score it against a job description using a
+        self-hosted Qwen model.
       </p>
+
+      <div className="panel" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginTop: 0 }}>1. Your resume</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Upload a PDF / DOCX / TXT, or paste the text. It fills the candidate
+          form below. Nothing is invented — only what your resume states.
+        </p>
+
+        <label>Upload file</label>
+        <input
+          type="file"
+          accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+          onChange={(e) => handleUpload(e.target.files?.[0])}
+          disabled={resumeLoading}
+        />
+
+        <label>…or paste resume text</label>
+        <textarea
+          rows={5}
+          value={resumeText}
+          onChange={(e) => setResumeText(e.target.value)}
+          placeholder="Paste your full resume text here…"
+        />
+        <button
+          onClick={handleParseText}
+          disabled={resumeLoading || resumeText.trim().length < 30}
+        >
+          {resumeLoading ? "Parsing…" : "Parse pasted text"}
+        </button>
+
+        {resumeError && <div className="error">{resumeError}</div>}
+        {resumeStatus && (
+          <p className="muted" style={{ color: "var(--good)" }}>{resumeStatus}</p>
+        )}
+      </div>
 
       <div className="grid">
         <div className="panel">
-          <h3 style={{ marginTop: 0 }}>Candidate</h3>
+          <h3 style={{ marginTop: 0 }}>2. Candidate profile</h3>
 
           <label>Name (optional)</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
@@ -104,7 +202,7 @@ export default function Home() {
         </div>
 
         <div className="panel">
-          <h3 style={{ marginTop: 0 }}>Job description</h3>
+          <h3 style={{ marginTop: 0 }}>3. Job description</h3>
           <label>Paste the full job description</label>
           <textarea
             rows={16}
