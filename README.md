@@ -40,8 +40,18 @@ ollama pull qwen2.5:3b
 
 ## API
 
+- `POST /api/resume/parse` — upload a resume file (`multipart/form-data`, field
+  `file`; PDF/DOCX/TXT, max 8 MB) **or** post JSON `{ "text": "..." }`. Returns
+  `{ parsed, candidate }`: a structured resume plus a ready-to-use candidate
+  profile. The model extracts only what the resume states — it never invents.
 - `POST /api/match` — body `{ candidate, jobDescription }`, returns a match result.
 - `GET /api/health` — reports Ollama reachability and whether the model is loaded.
+
+## Flow in the UI
+
+1. **Upload/paste your resume** → it fills the candidate profile.
+2. Review/edit the profile.
+3. Paste a job description → score it.
 
 ## Deploying to Vercel
 

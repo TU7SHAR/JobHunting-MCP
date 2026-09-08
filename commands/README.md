@@ -22,12 +22,16 @@ Documents what each command and key file in JobPilot does.
 | `lib/ollama.js` | Ollama HTTP client (`/api/chat`, `/api/tags`) + `OllamaError`. |
 | `lib/schema.js` | zod validation for request input and model output. |
 | `lib/match.js` | Match pipeline orchestration + the model system prompt. |
+| `lib/resume-extract.js` | Server-side text extraction from PDF/DOCX/TXT uploads. |
+| `lib/resume-parse.js` | Qwen-backed structured resume parsing (grounded, no fabrication). |
 | `app/api/match/route.js` | `POST /api/match` handler. |
 | `app/api/health/route.js` | `GET /api/health` handler. |
-| `app/page.js` | Browser UI (candidate form, job description, result card). |
+| `app/api/resume/parse/route.js` | `POST /api/resume/parse` — upload or paste a resume; returns `{parsed, candidate}`. |
+| `app/page.js` | Browser UI (resume intake, candidate form, job description, result card). |
 | `app/layout.js` | Root HTML layout + metadata. |
 | `app/globals.css` | Styling. |
 | `tests/scoring.test.js` | Unit tests for `lib/scoring.js`. |
+| `tests/resume.test.js` | Unit tests for resume mapping/coercion logic. |
 | `.env.example` | Template for environment configuration. |
 
 ## Environment variables

@@ -40,9 +40,27 @@ A 3B CPU model is unreliable for exact facts. So:
 | `lib/scoring.js` | Deterministic skill/experience/location scoring. Pure functions. |
 | `lib/ollama.js` | Thin Ollama `/api/chat` + `/api/tags` client. All wire details here. |
 | `lib/match.js` | Orchestrates deterministic → model → validation. System prompt lives here. |
+| `lib/resume-extract.js` | Extracts text from PDF/DOCX/TXT uploads (server-side). |
+| `lib/resume-parse.js` | Qwen-backed structured resume parse; strict no-fabrication prompt. |
 | `app/api/match/route.js` | `POST /api/match` HTTP handler + error mapping. |
 | `app/api/health/route.js` | `GET /api/health` — model reachability. |
-| `app/page.js` | Client UI: candidate form + job description + result card. |
+| `app/api/resume/parse/route.js` | `POST /api/resume/parse` — upload/paste → structured profile. |
+| `app/page.js` | Client UI: resume intake + candidate form + job description + result card. |
+
+## Resume intake flow
+
+```
+Upload (PDF/DOCX/TXT) or paste text
+      │  (app/page.js → POST /api/resume/parse)
+      ▼
+extract text (lib/resume-extract.js)
+      ▼
+Qwen structured parse (lib/resume-parse.js)  — grounded, no invented facts
+      ▼
+validate (parsedResumeSchema) → parsedResumeToCandidate()
+      ▼
+{ parsed, candidate } → UI auto-fills the candidate form
+```
 
 ## Security decisions
 
